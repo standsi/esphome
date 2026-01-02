@@ -1,0 +1,130 @@
+#include "esphome/core/log.h"
+#include "ulp_flash.h"
+#include "driver/rtc_io.h"
+#include "soc/rtc_io_reg.h"
+#include "esphome.h"
+#include "esphome/core/gpio.h"
+#include "esp_sleep.h"
+
+#if defined(SOC_ULP_FSM_SUPPORTED)
+// ESP32, ESP32-S2, ESP32-S3 with ULP-FSM enabled
+#if __has_include("esp32/ulp.h")
+#include "esp32/ulp.h"
+#elif __has_include("ulp/ulp.h")
+#include "ulp/ulp.h"
+#else
+#error "ULP-FSM header not found for this platform"
+#endif
+// ...existing ULP-FSM code...
+#elif defined(SOC_ULP_RISCV_SUPPORTED)
+// ESP32-S2/S3 ULP-RISC-V (different API)
+#include "ulp_riscv/ulp_riscv.h"
+// ...ULP-RISC-V code...
+#else
+#error "ULP not supported on this ESP32 variant"
+#endif
+
+namespace esphome {
+namespace ulp_flash {
+
+static const char *TAG = "ulp_flash.component";
+
+void ULP_FLASH_RUN(uint32_t us, uint32_t bit, FlashPulseWidth pulse_width_);
+
+void ULPFlash::setup() {
+  // Stop any previously running ULP program
+  // ulp_timer_stop();
+
+  // Convert GPIO pin to RTC IO index
+  gpio_num_t gpio = (gpio_num_t) pin_->get_pin();
+  int rtc_num = rtc_io_number_get(gpio);
+  if (rtc_num < 0) {
+    mark_failed(LOG_STR("Specified pin is not RTC-capable"));
+    return;
+  }
+  rtc_bit_ = RTC_GPIO_OUT_DATA_S + rtc_num;
+
+  // Init LED pin
+  rtc_gpio_init(gpio);
+  rtc_gpio_set_direction(gpio, RTC_GPIO_MODE_OUTPUT_ONLY);
+  rtc_gpio_set_level(gpio, 0);
+  // keep the rtc io live during deep sleep
+  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
+  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_ON);
+
+  // Run ULP
+  int delay_us = interval_ * 1000;  // interval_ is in ms
+  ULP_FLASH_RUN(delay_us, rtc_bit_, pulse_width_);
+}
+
+void ULPFlash::loop() {
+  // Nothing here — ULP runs independently
+}
+
+void ULP_FLASH_RUN(uint32_t us, uint32_t bit, FlashPulseWidth pulse_width_) {
+  RTC_SLOW_MEM[12] = 0;
+  // this is the default narrow pulse width
+  ulp_insn_t ulp_flash[] = {
+      // I_MOVI(R3, 12),                         // #12 -> R3
+      // I_LD(R0, R3, 0),                        // R0 = RTC_SLOW_MEM[R3(#12)]
+      // M_BL(1, 1),                             // GOTO M_LABEL(1) IF R0 < 1
+      I_WR_REG(RTC_GPIO_OUT_REG, bit, bit, 0),  // set pin high
+      // I_SUBI(R0, R0, 1),                      // R0 = R0 - 1, R0 = 1, R0 = 0
+      // I_ST(R0, R3, 0),                        // RTC_SLOW_MEM[R3(#12)] = R0
+      // M_BX(2),                                // GOTO M_LABEL(2)
+      I_DELAY(65000),
+      // M_LABEL(1),                             // M_LABEL(1)
+      I_WR_REG(RTC_GPIO_OUT_REG, bit, bit, 1),  // set pin low
+      //    I_ADDI(R0, R0, 1),                    // R0 = R0 + 1, R0 = 0, R0 = 1
+      //    I_ST(R0, R3, 0),                      // RTC_SLOW_MEM[R3(#12)] = R0
+      // M_LABEL(2),                             // M_LABEL(2)
+      I_HALT()  // HALT COPROCESSOR
+  };
+  // modify delay for medium pulse width (~16ms)
+  ulp_insn_t ulp_flash_medium[] = {
+      I_WR_REG(RTC_GPIO_OUT_REG, bit, bit, 0),                                  // set pin high
+      I_DELAY(65000), I_DELAY(65000), I_WR_REG(RTC_GPIO_OUT_REG, bit, bit, 1),  // set pin low
+      I_HALT()                                                                  // HALT COPROCESSOR
+  };
+  // modify delay for wide pulse width (~32ms)
+  ulp_insn_t ulp_flash_wide[] = {
+      I_WR_REG(RTC_GPIO_OUT_REG, bit, bit, 0),  // set pin high
+      I_DELAY(65000),
+      I_DELAY(65000),
+      I_DELAY(65000),
+      I_WR_REG(RTC_GPIO_OUT_REG, bit, bit, 1),  // set pin low
+      I_HALT()                                  // HALT COPROCESSOR
+  };
+
+  // Microseconds to delay between halt and wake states
+  ulp_set_wakeup_period(0, us);
+
+  // Load and start proper ULP program
+  if (pulse_width_ == FlashPulseWidth::MEDIUM) {
+    size_t size = sizeof(ulp_flash_medium) / sizeof(ulp_insn_t);
+    ulp_process_macros_and_load(0, ulp_flash_medium, &size);
+  } else if (pulse_width_ == FlashPulseWidth::WIDE) {
+    size_t size = sizeof(ulp_flash_wide) / sizeof(ulp_insn_t);
+    ulp_process_macros_and_load(0, ulp_flash_wide, &size);
+  } else {
+    size_t size = sizeof(ulp_flash) / sizeof(ulp_insn_t);
+    ulp_process_macros_and_load(0, ulp_flash, &size);
+  }
+  // now run it!!
+  ulp_run(0);
+}
+
+void ULPFlash::dump_config() {
+  if (rtc_bit_ < 0) {
+    ESP_LOGE(TAG, "Pin %d is not RTC-capable", pin_->get_pin());
+    return;
+  }
+  ESP_LOGCONFIG(TAG, "ULPFlash-Stan:");
+  ESP_LOGCONFIG(TAG, "  Interval: %u ms", interval_);
+  LOG_PIN("  Pin: ", pin_);
+  ESP_LOGCONFIG(TAG, "  RTC Bit is %d", rtc_bit_);
+  ESP_LOGCONFIG(TAG, "  Pulse Width: %d", static_cast<uint8_t>(pulse_width_));
+}
+
+}  // namespace ulp_flash
+}  // namespace esphome
