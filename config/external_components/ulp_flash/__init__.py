@@ -1,4 +1,5 @@
-from esphome import pins
+from esphome import automation, pins
+from esphome.automation import maybe_simple_id
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.const import CONF_ID, CONF_PIN
@@ -13,6 +14,20 @@ PULSE_WIDTHS = {
     "wide": pulse_width_enum.WIDE,
 }
 
+FLASH_ON = ulp_flash_ns.FLASH_ON
+FLASH_OFF = ulp_flash_ns.FLASH_OFF
+
+FLASH_STATES = {
+    "on": FLASH_ON,
+    "off": FLASH_OFF,
+}
+
+validate_flash_state = cv.enum(FLASH_STATES, lower=True)
+
+# actions
+OnAction = ulp_flash_ns.class_("OnAction", automation.Action)
+OffAction = ulp_flash_ns.class_("OffAction", automation.Action)
+
 CONFIG_SCHEMA = cv.Schema(
     {
         cv.GenerateID(): cv.declare_id(ULPFlash),
@@ -24,6 +39,24 @@ CONFIG_SCHEMA = cv.Schema(
         ),
     }
 ).extend(cv.COMPONENT_SCHEMA)
+
+FLASH_ACTION_SCHEMA = maybe_simple_id(
+    {
+        cv.Required(CONF_ID): cv.use_id(ULPFlash),
+    }
+)
+
+
+@automation.register_action("ulp_flash.on", OnAction, FLASH_ACTION_SCHEMA)
+async def flash_on_to_code(config, action_id, template_arg, args):
+    paren = await cg.get_variable(config[CONF_ID])
+    return cg.new_Pvariable(action_id, template_arg, paren)
+
+
+@automation.register_action("ulp_flash.off", OffAction, FLASH_ACTION_SCHEMA)
+async def flash_off_to_code(config, action_id, template_arg, args):
+    paren = await cg.get_variable(config[CONF_ID])
+    return cg.new_Pvariable(action_id, template_arg, paren)
 
 
 async def to_code(config):

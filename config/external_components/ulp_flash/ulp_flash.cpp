@@ -29,6 +29,67 @@ namespace ulp_flash {
 
 static const char *TAG = "ulp_flash.component";
 
+// states of flasher
+const bool FLASH_OFF = false;
+const bool FLASH_ON = true;
+
+const LogString *flash_command_to_str(bool state) {
+  if (state == FLASH_ON) {
+    return LOG_STR("ON");
+  } else if (state == FLASH_OFF) {
+    return LOG_STR("OFF");
+  } else {
+    return LOG_STR("UNKNOWN");
+  }
+}
+
+ULPFlash::ULPFlash() : flash_state{FLASH_OFF} {}
+
+ULPFlashCall::ULPFlashCall(ULPFlash *parent) : parent_(parent) {}
+ULPFlashCall &ULPFlashCall::set_command(const char *command) {
+  if (strcmp(command, "on") == 0) {
+    return this->set_command_on();
+  } else if (strcmp(command, "off") == 0) {
+    return this->set_command_off();
+  } else {
+    ESP_LOGE(TAG, "Invalid command string: %s", command);
+  }
+  return *this;
+}
+
+ULPFlashCall &ULPFlashCall::set_command_on() {
+  this->parent_->flash_state = FLASH_ON;
+  return *this;
+}
+ULPFlashCall &ULPFlashCall::set_command_off() {
+  this->parent_->flash_state = FLASH_OFF;
+  return *this;
+}
+
+ULPFlashCall ULPFlash::make_call() { return {this}; }
+
+void ULPFlashCall::perform() {
+  this->validate_();
+  // Execute the flash command by updating the ULP state
+  this->parent_->flash_state = this->flash_state_;
+  ESP_LOGD(TAG, "ULPFlash command set to %s", LOG_STR_ARG(flash_command_to_str(this->flash_state_)));
+}
+void ULPFlashCall::validate_() {
+  if (this->flash_state_ != FLASH_ON && this->flash_state_ != FLASH_OFF) {
+    ESP_LOGE(TAG, "Invalid flash state command");
+  }
+}
+
+void ULPFlash::add_on_state_callback(std::function<void()> &&f) { this->state_callback_.add(std::move(f)); }
+
+void ULPFlash::publish_state(bool save) {
+  ESP_LOGD(TAG, "Publishing ULPFlash state: %s", LOG_STR_ARG(flash_command_to_str(this->flash_state)));
+  this->state_callback_.call();
+  if (save) {
+    this->rtc_.save("flash_state", this->flash_state);
+  }
+}
+
 void ULP_FLASH_RUN(uint32_t us, uint32_t bit, FlashPulseWidth pulse_width_);
 
 void ULPFlash::setup() {
