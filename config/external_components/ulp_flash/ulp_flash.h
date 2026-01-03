@@ -32,6 +32,8 @@ class ULPFlashCall {
 
   ULPFlashCall &set_command_off();
 
+  ULPFlashCall &set_flash_state(bool state);
+
   void perform();
 
  protected:
@@ -39,6 +41,16 @@ class ULPFlashCall {
   ULPFlash *parent_;
   bool flash_state_;
 };
+
+/// Struct used to store the restored state of a flash
+struct ULPFlashRestoreState {
+  bool flash_state;
+
+  /// Convert this struct to a ulpflash call that can be performed.
+  ULPFlashCall to_call(ULPFlash *ulpflash);
+  /// Apply these settings to the ulp flash
+  void apply(ULPFlash *ulpflash);
+} __attribute__((packed));
 
 class ULPFlash : public Component, public EntityBase {
  public:
@@ -74,6 +86,7 @@ class ULPFlash : public Component, public EntityBase {
   int rtc_bit_{-1};                                       // store computed bit here
   FlashPulseWidth pulse_width_{FlashPulseWidth::NARROW};  // default is about 8ms
   friend ULPFlashCall;
+  optional<ULPFlashRestoreState> restore_state_();
   LazyCallbackManager<void()> state_callback_{};
   ESPPreferenceObject rtc_;
 };

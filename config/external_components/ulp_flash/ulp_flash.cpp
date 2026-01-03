@@ -66,6 +66,11 @@ ULPFlashCall &ULPFlashCall::set_command_off() {
   return *this;
 }
 
+ULPFlashCall &ULPFlashCall::set_flash_state(bool state) {
+  this->flash_state_ = state;
+  return *this;
+}
+
 ULPFlashCall ULPFlash::make_call() { return {this}; }
 
 void ULPFlashCall::perform() {
@@ -86,8 +91,29 @@ void ULPFlash::publish_state(bool save) {
   ESP_LOGD(TAG, "Publishing ULPFlash state: %s", LOG_STR_ARG(flash_command_to_str(this->flash_state)));
   this->state_callback_.call();
   if (save) {
-    this->rtc_.save("flash_state", this->flash_state);
+    ULPFlashRestoreState restore{};
+    memset(&restore, 0, sizeof(restore));
+    restore.flash_state = this->flash_state;
+    this->rtc_.save(&restore);
   }
+}
+
+optional<ULPFlashRestoreState> ULPFlash::restore_state_() {
+  this->rtc_ = global_preferences->make_preference<ULPFlashRestoreState>(this->get_preference_hash());
+  ULPFlashRestoreState recovered{};
+  if (!this->rtc_.load(&recovered))
+    return {};
+  return recovered;
+}
+
+ULPFlashCall ULPFlashRestoreState::to_call(ULPFlash *ulpflash) {
+  auto call = ulpflash->make_call();
+  call.set_flash_state(this->flash_state);
+  return call;
+}
+void ULPFlashRestoreState::apply(ULPFlash *ulpflash) {
+  ulpflash->flash_state = this->flash_state;
+  ulpflash->publish_state();
 }
 
 void ULP_FLASH_RUN(uint32_t us, uint32_t bit, FlashPulseWidth pulse_width_);
