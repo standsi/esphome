@@ -43,9 +43,11 @@ const LogString *flash_command_to_str(bool state) {
   }
 }
 
-ULPFlash::ULPFlash() : flash_state{FLASH_OFF} {}
+ULPFlash::ULPFlash() : flash_state{FLASH_OFF} {
+  ESP_LOGD(TAG, "ctor initial flash_state: %s", LOG_STR_ARG(flash_command_to_str(this->flash_state)));
+}
 
-ULPFlashCall::ULPFlashCall(ULPFlash *parent) : parent_(parent) {}
+ULPFlashCall::ULPFlashCall(ULPFlash *parent) : parent_(parent), flash_state_(parent->flash_state) {}
 ULPFlashCall &ULPFlashCall::set_command(const char *command) {
   if (strcmp(command, "on") == 0) {
     return this->set_command_on();
@@ -58,11 +60,13 @@ ULPFlashCall &ULPFlashCall::set_command(const char *command) {
 }
 
 ULPFlashCall &ULPFlashCall::set_command_on() {
-  this->parent_->flash_state = FLASH_ON;
+  // this->parent_->flash_state = FLASH_ON;
+  this->flash_state_ = FLASH_ON;
   return *this;
 }
 ULPFlashCall &ULPFlashCall::set_command_off() {
-  this->parent_->flash_state = FLASH_OFF;
+  // this->parent_->flash_state = FLASH_OFF;
+  this->flash_state_ = FLASH_OFF;
   return *this;
 }
 
@@ -78,6 +82,15 @@ void ULPFlashCall::perform() {
   // Execute the flash command by updating the ULP state
   this->parent_->flash_state = this->flash_state_;
   ESP_LOGD(TAG, "ULPFlash command set to %s", LOG_STR_ARG(flash_command_to_str(this->flash_state_)));
+  if (this->flash_state_ == FLASH_ON) {
+    // Start ULP timer
+    ulp_timer_resume();
+  } else {
+    // Stop ULP timer
+    ulp_timer_stop();
+  }
+  // Publish the new state and save it
+  this->parent_->publish_state(true);
 }
 void ULPFlashCall::validate_() {
   if (this->flash_state_ != FLASH_ON && this->flash_state_ != FLASH_OFF) {
@@ -112,6 +125,7 @@ ULPFlashCall ULPFlashRestoreState::to_call(ULPFlash *ulpflash) {
   return call;
 }
 void ULPFlashRestoreState::apply(ULPFlash *ulpflash) {
+  ESP_LOGD(TAG, "restoring flash_state: %s", LOG_STR_ARG(flash_command_to_str(this->flash_state)));
   ulpflash->flash_state = this->flash_state;
   ulpflash->publish_state();
 }
@@ -121,6 +135,8 @@ void ULP_FLASH_RUN(uint32_t us, uint32_t bit, FlashPulseWidth pulse_width_);
 void ULPFlash::setup() {
   // Stop any previously running ULP program
   // ulp_timer_stop();
+  esp_log_level_set(TAG, ESP_LOG_DEBUG);
+  ESP_LOGD(TAG, "flash state during setup: %s", LOG_STR_ARG(flash_command_to_str(this->flash_state)));
 
   // Convert GPIO pin to RTC IO index
   gpio_num_t gpio = (gpio_num_t) pin_->get_pin();
@@ -142,6 +158,22 @@ void ULPFlash::setup() {
   // Run ULP
   int delay_us = interval_ * 1000;  // interval_ is in ms
   ULP_FLASH_RUN(delay_us, rtc_bit_, pulse_width_);
+  // Restore previous state if any
+  auto restored = this->restore_state_();
+  if (restored.has_value()) {
+    restored->apply(this);
+  } else {
+    ESP_LOGD(TAG, "No previous state to restore");
+  }
+  // if flash off turn off ulp timer
+  if (this->flash_state == FLASH_OFF) {
+    ESP_LOGD(TAG, "Initial flash state is OFF, stopping ULP timer");
+    ulp_timer_stop();
+  } else {
+    ESP_LOGD(TAG, "Initial flash state is ON, starting ULP timer");
+    // Start ULP timer
+    ulp_timer_resume();
+  }
 }
 
 void ULPFlash::loop() {
@@ -211,6 +243,7 @@ void ULPFlash::dump_config() {
   LOG_PIN("  Pin: ", pin_);
   ESP_LOGCONFIG(TAG, "  RTC Bit is %d", rtc_bit_);
   ESP_LOGCONFIG(TAG, "  Pulse Width: %d", static_cast<uint8_t>(pulse_width_));
+  ESP_LOGCONFIG(TAG, "  Current Flash State: %s", LOG_STR_ARG(flash_command_to_str(this->flash_state)));
 }
 
 }  // namespace ulp_flash

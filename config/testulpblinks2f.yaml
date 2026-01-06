@@ -14,6 +14,7 @@ esp32:
 
 # Enable logging
 logger:
+  level: DEBUG
 
 # Enable Home Assistant API
 api:
@@ -54,3 +55,26 @@ ulp_flash:
 # deep_sleep:
 #   run_duration: 20s
 #   sleep_duration: 20s
+
+interval:
+  - interval: 2min
+    startup_delay: 1min
+    then:
+      - ulp_flash.on: flash1
+      - delay: 1min
+      - ulp_flash.off: flash1
+
+#time:
+  # - platform: homeassistant
+  #   id: homeassistant_time
+  #   on_time:
+  #     - seconds: 0
+  #       minutes: /2
+  #       hours: '*'
+  #       then:
+  #         - ulp_flash.on: flash1
+  #     - seconds: 30
+  #       minutes: /2
+  #       hours: '*'
+  #       then:
+  #         - ulp_flash.off: flash1
