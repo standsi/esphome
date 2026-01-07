@@ -24,6 +24,15 @@ FLASH_STATES = {
 
 validate_flash_state = cv.enum(FLASH_STATES, lower=True)
 
+# add init state
+flash_init_state_enum = ulp_flash_ns.enum("FlashInitState", is_class=True)
+
+INIT_STATES = {
+    "on": flash_init_state_enum.FLASH_INIT_ON,
+    "off": flash_init_state_enum.FLASH_INIT_OFF,
+    "last": flash_init_state_enum.FLASH_INIT_LAST,
+}
+
 # actions
 OnAction = ulp_flash_ns.class_("OnAction", automation.Action)
 OffAction = ulp_flash_ns.class_("OffAction", automation.Action)
@@ -35,6 +44,10 @@ CONFIG_SCHEMA = cv.Schema(
         cv.Optional("interval", default="1s"): cv.positive_time_period_milliseconds,
         cv.Optional("pulse_width", default="narrow"): cv.enum(
             PULSE_WIDTHS,
+            lower=True,
+        ),
+        cv.Optional("init_state", default="last"): cv.enum(
+            INIT_STATES,
             lower=True,
         ),
     }
@@ -66,3 +79,4 @@ async def to_code(config):
     cg.add(var.set_pin(pin))
     cg.add(var.set_interval(config["interval"]))
     cg.add(var.set_pulse_width(config["pulse_width"]))
+    cg.add(var.set_init_state(config["init_state"]))

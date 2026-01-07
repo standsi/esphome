@@ -48,6 +48,7 @@ ulp_flash:
   pin: GPIO8
   interval: 800ms
   pulse_width: wide
+  init_state: last
   id: flash1
 
 # Use deep sleep to prove that ulp runs even when in deep sleep
@@ -61,8 +62,8 @@ interval:
   - interval: 1min
     startup_delay: 1min
     then:
-#      - ulp_flash.on: flash1
-      - ulp_flash.off: flash1
+      - ulp_flash.on: flash1
+#      - ulp_flash.off: flash1
       - delay: 30s
       - deep_sleep.enter:
           id: sleep1

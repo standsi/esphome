@@ -160,12 +160,22 @@ void ULPFlash::setup() {
   // Run ULP
   int delay_us = interval_ * 1000;  // interval_ is in ms
   ULP_FLASH_RUN(delay_us, rtc_bit_, pulse_width_);
-  // Restore previous state if any
-  auto restored = this->restore_state_();
-  if (restored.has_value()) {
-    restored->apply(this);
+  // decide if init to on or off, or restore from last published to rtc
+  if (this->init_state_ == FlashInitState::FLASH_INIT_ON) {
+    this->flash_state = FLASH_ON;
+    ESP_LOGD(TAG, "Initial flash state set to ON");
+  } else if (this->init_state_ == FlashInitState::FLASH_INIT_OFF) {
+    this->flash_state = FLASH_OFF;
+    ESP_LOGD(TAG, "Initial flash state set to OFF");
   } else {
-    ESP_LOGD(TAG, "No previous state to restore");
+    // Restore previous state if any
+    auto restored = this->restore_state_();
+    if (restored.has_value()) {
+      restored->apply(this);
+    } else {
+      ESP_LOGD(TAG, "No previous state to restore");
+    }
+    ESP_LOGD(TAG, "Initial flash state set to LAST (restore from RTC)");
   }
   // if flash off turn off ulp timer
   if (this->flash_state == FLASH_OFF) {

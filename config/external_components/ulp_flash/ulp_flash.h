@@ -16,6 +16,12 @@ enum class FlashPulseWidth : uint8_t {
   WIDE = 2,
 };
 
+enum class FlashInitState : uint8_t {
+  FLASH_INIT_ON = 0,
+  FLASH_INIT_OFF = 1,
+  FLASH_INIT_LAST = 2,
+};
+
 const extern bool FLASH_OFF;
 const extern bool FLASH_ON;
 
@@ -63,6 +69,7 @@ class ULPFlash : public Component, public EntityBase {
   void set_pin(InternalGPIOPin *pin) { pin_ = pin; }
   void set_interval(uint32_t interval) { interval_ = interval; }
   void set_pulse_width(FlashPulseWidth width) { pulse_width_ = width; }
+  void set_init_state(FlashInitState init_state) { init_state_ = init_state; }
 
   bool flash_state;
 
@@ -83,8 +90,9 @@ class ULPFlash : public Component, public EntityBase {
   uint32_t interval_{1000};  // default 1s
   uint32_t last_toggle_{0};
   bool state_{false};
-  int rtc_bit_{-1};                                       // store computed bit here
-  FlashPulseWidth pulse_width_{FlashPulseWidth::NARROW};  // default is about 8ms
+  int rtc_bit_{-1};                                             // store computed bit here
+  FlashPulseWidth pulse_width_{FlashPulseWidth::NARROW};        // default is about 8ms
+  FlashInitState init_state_{FlashInitState::FLASH_INIT_LAST};  // default is to restore from rtc
   friend ULPFlashCall;
   optional<ULPFlashRestoreState> restore_state_();
   LazyCallbackManager<void()> state_callback_{};
