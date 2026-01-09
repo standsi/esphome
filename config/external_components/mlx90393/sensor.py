@@ -1,4 +1,4 @@
-from esphome import pins
+from esphome import automation, pins
 import esphome.codegen as cg
 from esphome.components import i2c, sensor
 import esphome.config_validation as cv
@@ -24,6 +24,11 @@ mlx90393_ns = cg.esphome_ns.namespace("mlx90393")
 
 MLX90393Component = mlx90393_ns.class_(
     "MLX90393Cls", cg.PollingComponent, i2c.I2CDevice
+)
+
+# add action to put the sensor into WOC mode
+MLX90393EnableWOCAction = mlx90393_ns.class_(
+    "MLX90393EnableWOCAction", automation.Action
 )
 
 GAIN = {
@@ -123,6 +128,24 @@ CONFIG_SCHEMA = cv.All(
     .extend(i2c.i2c_device_schema(0x0C)),
     _validate,
 )
+
+
+# register action to put sensor into WOC mode
+@automation.register_action(
+    "mlx90393.enable_woc",
+    MLX90393EnableWOCAction,
+    cv.Schema(
+        {
+            cv.Required(CONF_ID): cv.use_id(MLX90393Component),
+            cv.Required("woxy_threshold"): cv.templatable(cv.int_),
+        }
+    ),
+)
+async def mlx90393_enable_woc_to_code(config, action_id, template_arg, args):
+    var = cg.new_Pvariable(action_id, config[CONF_ID])
+    woxy_threshold_ = await cg.templatable(config["woxy_threshold"], template_arg)
+    cg.add(var.set_woxy_threshold(woxy_threshold_))
+    return var
 
 
 async def to_code(config):

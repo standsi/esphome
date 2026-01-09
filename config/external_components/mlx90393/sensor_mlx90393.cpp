@@ -106,6 +106,8 @@ void MLX90393Cls::setup() {
   // note the two arguments A0 and A1 which are used to construct an i2c address
   // we can hard-code these because we never actually use the constructed address
   // see the transceive function above, which uses the address from I2CComponent
+  // ** note that this will also perform a reset of the chip which cancels WOC mode
+  // and goes to the default measure mode.
   this->mlx_.begin_with_hal(this, 0, 0);
 
   if (!this->apply_all_settings_()) {
@@ -270,6 +272,40 @@ void MLX90393Cls::verify_settings_timeout_(MLX90393Setting stage) {
   }
 
   this->set_timeout("verify settings", 3000, [this, next_stage]() { this->verify_settings_timeout_(next_stage); });
+}
+
+bool MLX90393Cls::enable_woc_mode(uint16_t woxyThreshold, uint16_t wozThreshold, uint8_t axes) {
+  uint8_t status = this->mlx_.setWOXYThreshold(woxyThreshold);
+  if (status != MLX90393::STATUS_OK) {
+    ESP_LOGE(TAG, "failed to set WOC xy threshold");
+    this->mark_failed();
+    return false;
+  }
+  status = this->mlx_.setWOZThreshold(wozThreshold);
+  if (status != MLX90393::STATUS_OK) {
+    ESP_LOGE(TAG, "failed to set WOC z threshold");
+    this->mark_failed();
+    return false;
+  }
+  status = this->mlx_.startWakeOnChange(axes);
+  if (status != MLX90393::STATUS_OK) {
+    ESP_LOGE(TAG, "failed to enable WOC mode");
+    this->mark_failed();
+    return false;
+  }
+  ESP_LOGI(TAG, "WOC mode enabled");
+  return true;
+}
+
+bool MLX90393Cls::exit_woc_mode() {
+  uint8_t status = this->mlx_.sendCommand(MLX90393::CMD_EXIT);
+  if (status != MLX90393::STATUS_OK) {
+    ESP_LOGE(TAG, "failed to exit WOC mode");
+    this->mark_failed();
+    return false;
+  }
+  ESP_LOGI(TAG, "WOC mode exited");
+  return true;
 }
 
 }  // namespace mlx90393

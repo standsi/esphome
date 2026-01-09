@@ -6,6 +6,7 @@
 #include "esphome/components/sensor/sensor.h"
 #include "esphome/core/component.h"
 #include "esphome/core/hal.h"
+#include "esphome/core/automation.h"
 
 namespace esphome {
 namespace mlx90393 {
@@ -45,8 +46,10 @@ class MLX90393Cls : public PollingComponent, public i2c::I2CDevice, public MLX90
   }
   void set_hallconf(uint8_t hallconf) { hallconf_ = hallconf; }
   // ** mods to be able to use WOC mode
-
-  // overrides for MLX library
+  bool enable_woc_mode(uint16_t woxyThreshold, uint16_t wozThreshold, uint8_t axes);
+  bool exit_woc_mode();
+  // void enable_woc_mode_action(uint16_t woxy_threshold);
+  //  overrides for MLX library
 
   // disable lint because it keeps suggesting const uint8_t *response.
   // this->read() writes data into response, so it can't be const
@@ -77,6 +80,20 @@ class MLX90393Cls : public PollingComponent, public i2c::I2CDevice, public MLX90
 
   bool verify_setting_(MLX90393Setting which);
   void verify_settings_timeout_(MLX90393Setting stage);
+};
+// action to enable WOC mode
+template<typename... Ts> class MLX90393EnableWOCAction : public Action<Ts...>, public Parented<MLX90393Cls> {
+ public:
+  TEMPLATABLE_VALUE(uint16_t, woxy_threshold)
+
+  void play(const Ts &...x) override {
+    auto woxy_threshold = this->woxy_threshold_.value(x...);
+    // enable WOC mode with some default thresholds and all axes
+    this->parent_->enable_woc_mode(woxy_threshold, 1000, MLX90393::X_FLAG | MLX90393::Y_FLAG | MLX90393::Z_FLAG);
+  }
+
+ protected:
+  MLX90393Cls *parent_;
 };
 
 }  // namespace mlx90393

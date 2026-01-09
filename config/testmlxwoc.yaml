@@ -52,6 +52,11 @@ sensor:
     x_axis:
       name: "x"
       id: mlx_x
+      # on_value:
+      #   then:
+      #     - mlx90393.enable_woc:
+      #         id: mlx
+      #         woxy_threshold: 900
     y_axis:
       name: "y"
       internal: True
@@ -60,3 +65,11 @@ sensor:
       internal: True
     address: 0x18
     update_interval: 2s
+
+interval:
+  - interval: 10min
+    then:
+      - logger.log: "entering WOC mode "
+      - mlx90393.enable_woc:
+          id: mlx
+          woxy_threshold: 900
