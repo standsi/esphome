@@ -14,6 +14,7 @@ esp32:
 
 # Enable logging
 logger:
+  level: VERBOSE
 
 # Enable Home Assistant API
 api:
@@ -66,10 +67,17 @@ sensor:
     address: 0x18
     update_interval: 2s
 
+deep_sleep:
+  id: sleep1
+
 interval:
-  - interval: 10min
+  - interval: 2min
+    startup_delay: 1min
     then:
       - logger.log: "entering WOC mode "
       - mlx90393.enable_woc:
           id: mlx
           woxy_threshold: 900
+      - deep_sleep.enter:
+          id: sleep1
+          sleep_duration: 20s

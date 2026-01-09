@@ -110,6 +110,9 @@ void MLX90393Cls::setup() {
   // and goes to the default measure mode.
   this->mlx_.begin_with_hal(this, 0, 0);
 
+  // need to exit any mode already set
+  this->exit_woc_mode();
+  //
   if (!this->apply_all_settings_()) {
     this->mark_failed();
   }
@@ -275,6 +278,7 @@ void MLX90393Cls::verify_settings_timeout_(MLX90393Setting stage) {
 }
 
 bool MLX90393Cls::enable_woc_mode(uint16_t woxyThreshold, uint16_t wozThreshold, uint8_t axes) {
+  // note that the set thresholds have already checked for valid status...
   uint8_t status = this->mlx_.setWOXYThreshold(woxyThreshold);
   if (status != MLX90393::STATUS_OK) {
     ESP_LOGE(TAG, "failed to set WOC xy threshold");
@@ -288,9 +292,12 @@ bool MLX90393Cls::enable_woc_mode(uint16_t woxyThreshold, uint16_t wozThreshold,
     return false;
   }
   status = this->mlx_.startWakeOnChange(axes);
-  if (status != MLX90393::STATUS_OK) {
-    ESP_LOGE(TAG, "failed to enable WOC mode");
-    this->mark_failed();
+  // NOTE this returns the return status byte from the sensor,
+  //  need to check for bit 010x for error using checkStatus from driver
+  if (this->mlx_.checkStatus(status) != MLX90393::STATUS_OK) {
+    ESP_LOGE(TAG, "failed to enable WOC mode with error %u", status);
+    // this->mark_failed();
+    this->exit_woc_mode();
     return false;
   }
   ESP_LOGI(TAG, "WOC mode enabled");
@@ -299,8 +306,10 @@ bool MLX90393Cls::enable_woc_mode(uint16_t woxyThreshold, uint16_t wozThreshold,
 
 bool MLX90393Cls::exit_woc_mode() {
   uint8_t status = this->mlx_.sendCommand(MLX90393::CMD_EXIT);
-  if (status != MLX90393::STATUS_OK) {
-    ESP_LOGE(TAG, "failed to exit WOC mode");
+  // NOTE this returns the return status byte from the sensor,
+  //  need to check for bit 010x for error using checkStatus from driver
+  if (this->mlx_.checkStatus(status) != MLX90393::STATUS_OK) {
+    ESP_LOGE(TAG, "failed to exit WOC mode with error %u", status);
     this->mark_failed();
     return false;
   }

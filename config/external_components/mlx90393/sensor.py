@@ -142,9 +142,10 @@ CONFIG_SCHEMA = cv.All(
     ),
 )
 async def mlx90393_enable_woc_to_code(config, action_id, template_arg, args):
-    var = cg.new_Pvariable(action_id, config[CONF_ID])
-    woxy_threshold_ = await cg.templatable(config["woxy_threshold"], template_arg)
-    cg.add(var.set_woxy_threshold(woxy_threshold_))
+    parent = await cg.get_variable(config[CONF_ID])
+    var = cg.new_Pvariable(action_id, template_arg, parent)
+    woxy_threshold = await cg.templatable(config["woxy_threshold"], args, int)
+    cg.add(var.set_woxy_threshold(woxy_threshold))
     return var
 
 

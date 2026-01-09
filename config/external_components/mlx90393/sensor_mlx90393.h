@@ -82,8 +82,9 @@ class MLX90393Cls : public PollingComponent, public i2c::I2CDevice, public MLX90
   void verify_settings_timeout_(MLX90393Setting stage);
 };
 // action to enable WOC mode
-template<typename... Ts> class MLX90393EnableWOCAction : public Action<Ts...>, public Parented<MLX90393Cls> {
+template<typename... Ts> class MLX90393EnableWOCAction : public Action<Ts...> {
  public:
+  explicit MLX90393EnableWOCAction(MLX90393Cls *parent) : parent_(parent) {}
   TEMPLATABLE_VALUE(uint16_t, woxy_threshold)
 
   void play(const Ts &...x) override {
