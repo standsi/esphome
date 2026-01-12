@@ -103,15 +103,25 @@ bool MLX90393Cls::apply_all_settings_() {
 }
 
 void MLX90393Cls::setup() {
+  MLX90393::txyz data;
+  delay(3000);
+  // need to exit any mode already set
+  // this->exit_woc_mode();
+  // this->set_address(0x18);
+  // this->mlx_.exit();
+  delay(50);
   // note the two arguments A0 and A1 which are used to construct an i2c address
   // we can hard-code these because we never actually use the constructed address
   // see the transceive function above, which uses the address from I2CComponent
   // ** note that this will also perform a reset of the chip which cancels WOC mode
   // and goes to the default measure mode.
   this->mlx_.begin_with_hal(this, 0, 0);
-
-  // need to exit any mode already set
-  this->exit_woc_mode();
+  this->mlx_.exit();
+  delay(50);
+  this->mlx_.reset();
+  delay(50);
+  // perform a dummy read to clear out any old data
+  this->mlx_.readData(data);
   //
   if (!this->apply_all_settings_()) {
     this->mark_failed();
@@ -278,6 +288,10 @@ void MLX90393Cls::verify_settings_timeout_(MLX90393Setting stage) {
 }
 
 bool MLX90393Cls::enable_woc_mode(uint16_t woxyThreshold, uint16_t wozThreshold, uint8_t axes) {
+  // try disabling loop
+  this->disable_loop();
+  ESP_LOGI(TAG, "loop disabled - enabling WOC mode");
+  //
   // note that the set thresholds have already checked for valid status...
   uint8_t status = this->mlx_.setWOXYThreshold(woxyThreshold);
   if (status != MLX90393::STATUS_OK) {

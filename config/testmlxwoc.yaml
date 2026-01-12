@@ -14,7 +14,7 @@ esp32:
 
 # Enable logging
 logger:
-  level: VERBOSE
+  level: DEBUG
 
 # Enable Home Assistant API
 api:
@@ -69,6 +69,11 @@ sensor:
 
 deep_sleep:
   id: sleep1
+  wakeup_pin:
+    number: GPIO18
+    mode:
+      input: true
+      pulldown: true
 
 interval:
   - interval: 2min
@@ -80,4 +85,4 @@ interval:
           woxy_threshold: 900
       - deep_sleep.enter:
           id: sleep1
-          sleep_duration: 20s
+          sleep_duration: 60s
