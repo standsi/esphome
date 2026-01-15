@@ -104,11 +104,11 @@ bool MLX90393Cls::apply_all_settings_() {
 
 void MLX90393Cls::setup() {
   MLX90393::txyz data;
-  delay(3000);
-  // need to exit any mode already set
-  // this->exit_woc_mode();
-  // this->set_address(0x18);
-  // this->mlx_.exit();
+  // delay(3000);
+  //  need to exit any mode already set
+  //  this->exit_woc_mode();
+  //  this->set_address(0x18);
+  //  this->mlx_.exit();
   delay(50);
   // note the two arguments A0 and A1 which are used to construct an i2c address
   // we can hard-code these because we never actually use the constructed address
