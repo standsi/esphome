@@ -77,15 +77,38 @@ ULPFlashCall &ULPFlashCall::set_flash_state(bool state) {
 
 ULPFlashCall ULPFlash::make_call() { return {this}; }
 
+void ULPFlash::disconnect_led_pin() {
+  if (this->pin_ != nullptr) {
+    gpio_num_t gpio = (gpio_num_t) pin_->get_pin();
+    rtc_gpio_deinit(gpio);
+    ESP_LOGD(TAG, "ULPFlash LED pin disconnected");
+  }
+}
+
+void ULPFlash::reconnect_led_pin() {
+  if (this->pin_ != nullptr) {
+    gpio_num_t gpio = (gpio_num_t) pin_->get_pin();
+    rtc_gpio_deinit(gpio);
+    rtc_gpio_init(gpio);
+    rtc_gpio_set_direction(gpio, RTC_GPIO_MODE_OUTPUT_ONLY);
+    rtc_gpio_set_level(gpio, 0);
+    ESP_LOGD(TAG, "ULPFlash LED pin reconnected");
+  }
+}
+
 void ULPFlashCall::perform() {
   this->validate_();
   // Execute the flash command by updating the ULP state
   this->parent_->flash_state = this->flash_state_;
   ESP_LOGD(TAG, "ULPFlash command set to %s", LOG_STR_ARG(flash_command_to_str(this->flash_state_)));
   if (this->flash_state_ == FLASH_ON) {
+    // reconnect the led pin in case it was disconnected
+    this->parent_->reconnect_led_pin();
     // Start ULP timer
     ulp_timer_resume();
   } else {
+    // disconnect the led pin to allow other components to use it
+    this->parent_->disconnect_led_pin();
     // Stop ULP timer
     ulp_timer_stop();
   }
@@ -135,7 +158,7 @@ void ULP_FLASH_RUN(uint32_t us, uint32_t bit, FlashPulseWidth pulse_width_);
 void ULPFlash::setup() {
   // Stop any previously running ULP program
   // ulp_timer_stop();
-  delay(3000);
+  // delay(3000);
 
   esp_log_level_set(TAG, ESP_LOG_DEBUG);
   ESP_LOGD(TAG, "flash state during setup: %s", LOG_STR_ARG(flash_command_to_str(this->flash_state)));

@@ -84,6 +84,9 @@ class ULPFlash : public Component, public EntityBase {
    * @param save Whether to save the updated values in RTC area.
    */
   void publish_state(bool save = true);
+  // methods to re-connect and disconnect the led pin so can be used by other components
+  void reconnect_led_pin();
+  void disconnect_led_pin();
 
  protected:
   InternalGPIOPin *pin_{nullptr};

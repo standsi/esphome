@@ -1,0 +1,122 @@
+esphome:
+  name: testulpblinks2
+  friendly_name: testulpblinks2
+
+esp32:
+  board: adafruit_qtpy_esp32s2
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      # NOTE: Without this option it will not compile
+      CONFIG_ULP_COPROC_ENABLED: "y"
+      CONFIG_ULP_COPROC_TYPE_FSM: "y"
+      CONFIG_ULP_COPROC_RESERVE_MEM: "1024"
+
+# Enable logging
+logger:
+  level: DEBUG
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "DoNGjiuCLyX5Vh88Xbpr6gqH0t8LaVKwimHtYo6Y+Nc="
+
+ota:
+  - platform: esphome
+    password: "3afa5b49ddd26d69510a16428cd2f339"
+
+wifi:
+  ssid: !secret wifi_ssid_test
+  password: !secret wifi_password_test
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Testulpblink Fallback Hotspot"
+    password: "rbg8fsty6eTD"
+
+captive_portal:
+
+external_components:
+  - source:
+      type: local
+      path: external_components
+#  - source: github://standsi/esphome-external-components@testBlinkMods2a
+#    components: [ ulp_blink ]
+#    refresh: 5min
+
+globals:
+  - id: use_flash
+    type: bool
+    restore_value: true
+    initial_value: 'true'
+
+ulp_flash:
+  pin:
+    number: GPIO8
+    allow_other_uses: True
+  interval: 800ms
+  pulse_width: wide
+  init_state: last
+  id: flash1
+
+output:
+  - platform: gpio
+    id: light_output
+    pin:
+      number: GPIO8
+      inverted: True
+      mode: OUTPUT_OPEN_DRAIN
+      allow_other_uses: True
+
+# external light
+light:
+  - platform: binary
+    name: "Cal Light"
+    output: light_output
+    id: externalLightCal
+    internal: True
+
+# Use deep sleep to prove that ulp runs even when in deep sleep
+# The led will blink very faintly and quickly in sleep mode, watch closely to see it
+deep_sleep:
+  id: sleep1
+  # run_duration: 3min
+  # sleep_duration: 20s
+
+interval:
+  - interval: 1min
+    startup_delay: 1min
+    then:
+      - lambda: |-
+          id(use_flash) = !id(use_flash);
+          ESP_LOGD("main", "Setting use_flash to %s", id(use_flash) ? "true" : "false");
+      - if:
+          condition:
+            - lambda: 'return id(use_flash);'
+          then:
+            - ulp_flash.on: flash1
+      #      - ulp_flash.off: flash1
+            - delay: 10s
+          else:
+            - ulp_flash.off: flash1
+            - delay: 2s
+            - light.turn_on: externalLightCal
+            - delay: 30s
+      - deep_sleep.enter:
+          id: sleep1
+          sleep_duration: 30s
+
+#time:
+  # - platform: homeassistant
+  #   id: homeassistant_time
+  #   on_time:
+  #     - seconds: 0
+  #       minutes: /2
+  #       hours: '*'
+  #       then:
+  #         - ulp_flash.on: flash1
+  #     - seconds: 30
+  #       minutes: /2
+  #       hours: '*'
+  #       then:
+  #         - ulp_flash.off: flash1
