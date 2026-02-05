@@ -50,6 +50,7 @@ ulp_flash:
   pulse_width: wide
   init_state: last
   id: flash1
+  pin_invert: "no"
 
 # Use deep sleep to prove that ulp runs even when in deep sleep
 # The led will blink very faintly and quickly in sleep mode, watch closely to see it
