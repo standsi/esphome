@@ -1,0 +1,68 @@
+# substitutions:
+#   lp_blink_pin: "4"
+
+external_components:
+  - source:
+      type: local
+      path: external_components
+
+esphome:
+  name: esp32c6_ulp_blink
+
+esp32:
+  variant: esp32c6
+  board: esp32-c6-devkitc-1
+  framework:
+    type: esp-idf
+
+logger:
+  level: DEBUG
+
+wifi:
+  ssid: "your_ssid"
+  password: "your_password"
+
+lp_blink:
+  id: lp_blink_component
+  # gpio_num: ${lp_blink_pin}
+  gpio_num: 4
+  init_state: last
+  pulse_width_us: 30000
+  wake_period_ms: 1000
+
+number:
+  - platform: template
+    name: "LP Pulse Width (us)"
+    id: lp_pulse_width_us
+    min_value: 1000
+    max_value: 100000
+    step: 1000
+    optimistic: true
+    initial_value: 30000
+    set_action:
+      lambda: |-
+        id(lp_blink_component).set_pulse_width_us((uint32_t) x);
+
+  - platform: template
+    name: "LP Wake Period (ms)"
+    id: lp_wake_period_ms
+    min_value: 100
+    max_value: 5000
+    step: 100
+    optimistic: true
+    initial_value: 1000
+    set_action:
+      lambda: |-
+        id(lp_blink_component).set_wakeup_period_ms((uint32_t) x);
+
+switch:
+  - platform: template
+    name: "LP Blink Enabled"
+    lambda: |-
+      return id(lp_blink_component).is_running();
+    turn_on_action:
+      lambda: |-
+        id(lp_blink_component).start_blink();
+    turn_off_action:
+      lambda: |-
+        id(lp_blink_component).stop_blink();
