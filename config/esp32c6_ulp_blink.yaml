@@ -7,11 +7,11 @@ external_components:
       path: external_components
 
 esphome:
-  name: esp32c6_ulp_blink
+  name: esp32c6ulpblink
 
 esp32:
   variant: esp32c6
-  board: esp32-c6-devkitc-1
+  board: adafruit_feather_esp32c6
   framework:
     type: esp-idf
 

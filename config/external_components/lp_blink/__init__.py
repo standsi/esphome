@@ -1,10 +1,9 @@
 import esphome.codegen as cg
-from esphome.components.esp32 import (
-    add_idf_sdkconfig_option,
-    include_builtin_idf_component,
-)
+from esphome.components import esp32
+from esphome.components.esp32 import add_idf_sdkconfig_option
 import esphome.config_validation as cv
 from esphome.const import CONF_ID
+from esphome.core import CORE
 
 DEPENDENCIES = ["esp32"]
 
@@ -16,13 +15,27 @@ CONF_INIT_STATE = "init_state"
 CONF_PULSE_WIDTH_US = "pulse_width_us"
 CONF_WAKE_PERIOD_MS = "wake_period_ms"
 
-InitState = lp_blink_ns.enum("InitState")
+InitState = lp_blink_ns.enum("InitState", is_class=True)
 
 INIT_STATE_OPTIONS = {
     "running": InitState.RUNNING,
     "stopped": InitState.STOPPED,
     "last": InitState.LAST,
 }
+
+KEY_ESP32 = "esp32"
+KEY_EXCLUDE_COMPONENTS = "exclude_components"
+
+
+def _include_builtin_idf_component(name: str) -> None:
+    include_component = getattr(esp32, "include_builtin_idf_component", None)
+    if include_component is not None:
+        include_component(name)
+        return
+
+    esp32_data = CORE.data.setdefault(KEY_ESP32, {})
+    excluded = esp32_data.setdefault(KEY_EXCLUDE_COMPONENTS, set())
+    excluded.discard(name)
 
 
 CONFIG_SCHEMA = cv.Schema(
@@ -39,7 +52,7 @@ CONFIG_SCHEMA = cv.Schema(
 
 
 async def to_code(config):
-    include_builtin_idf_component("ulp")
+    _include_builtin_idf_component("ulp")
     add_idf_sdkconfig_option("CONFIG_ULP_COPROC_ENABLED", True)
     add_idf_sdkconfig_option("CONFIG_ULP_COPROC_TYPE_LP_CORE", True)
     add_idf_sdkconfig_option("CONFIG_ULP_COPROC_RESERVE_MEM", 4096)
