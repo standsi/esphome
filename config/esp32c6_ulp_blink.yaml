@@ -19,14 +19,14 @@ logger:
   level: DEBUG
 
 wifi:
-  ssid: "your_ssid"
-  password: "your_password"
+  ssid: "STANXPS14 7054"
+  password: "948-r26N"
 
 lp_blink:
   id: lp_blink_component
   # gpio_num: ${lp_blink_pin}
   gpio_num: 4
-  init_state: last
+  init_state: running
   pulse_width_us: 30000
   wake_period_ms: 1000
 
