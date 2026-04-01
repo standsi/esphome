@@ -19,14 +19,16 @@ logger:
   level: DEBUG
 
 wifi:
-  ssid: "STANXPS14 7054"
-  password: "948-r26N"
+  ssid: !secret wifi_ssid_test
+  password: !secret wifi_password_test
+  # ssid: "STANXPS14 7054"
+  # password: "948-r26N"
 
 lp_blink:
   id: lp_blink_component
   # gpio_num: ${lp_blink_pin}
   gpio_num: 4
-  init_state: running
+  init_state: last
   pulse_width_us: 30000
   wake_period_ms: 1000
 
@@ -58,6 +60,7 @@ number:
 switch:
   - platform: template
     name: "LP Blink Enabled"
+    id: switch_lp_blink_enabled
     lambda: |-
       return id(lp_blink_component).is_running();
     turn_on_action:
@@ -66,3 +69,54 @@ switch:
     turn_off_action:
       lambda: |-
         id(lp_blink_component).stop_blink();
+
+binary_sensor:
+  - platform: gpio
+    id: noSleepSwitch
+    pin:
+      number: GPIO5
+      mode:
+        input: True
+        pulldown: True
+      allow_other_uses: True
+
+deep_sleep:
+  id: sleep1
+  wakeup_pin:
+    number: GPIO5
+    allow_other_uses: true
+    mode:
+      input: true
+      pulldown: true
+
+interval:
+  - interval: 15s
+    startup_delay: 7s
+    then:
+      - if:
+          condition:
+            lambda: "return id(lp_blink_component).is_running();"
+          then:
+            logger.log: "LP blink is running"
+          else:
+            - logger.log: "LP blink is NOT running, turning on "
+            - lambda: |-
+                id(lp_blink_component).start_blink();
+
+  - interval: 60s
+    startup_delay: 30s
+    then:
+      - if:
+          condition:
+            lambda: "return id(lp_blink_component).is_running();"
+          then:
+            logger.log: "just checking...lp blink is running"
+          else:
+            logger.log: "just checking...lp blink is NOT running"
+      - if:
+          condition:
+            - binary_sensor.is_off: noSleepSwitch
+          then:
+            - deep_sleep.enter:
+                id: sleep1
+                sleep_duration: 5min

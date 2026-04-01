@@ -93,11 +93,13 @@ bool LPBlinkComponent::start_lp_core_() {
 void LPBlinkComponent::setup() {
   if (this->should_start_on_boot_()) {
     this->start_lp_core_();
+    this->running_ = true;
     return;
   }
 
   this->running_ = false;
   this->save_last_state_(false);
+  ulp_lp_core_stop();
   ESP_LOGI(TAG, "LP blink initialized in stopped state");
 }
 
