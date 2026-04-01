@@ -18,11 +18,25 @@ esp32:
 logger:
   level: DEBUG
 
+# Enable Home Assistant API
+api:
+  password: "rascal123"
+
+ota:
+  - platform: esphome
+    password: "rascal123"
+
 wifi:
   ssid: !secret wifi_ssid_test
   password: !secret wifi_password_test
   # ssid: "STANXPS14 7054"
   # password: "948-r26N"
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Esp32C6Template Fallback Hotspot"
+    password: "J5ZYOAJba0RQ"
+
+captive_portal:
 
 lp_blink:
   id: lp_blink_component

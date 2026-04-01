@@ -1,0 +1,29 @@
+esphome:
+  name: esp32c6template
+
+esp32:
+  board: adafruit_feather_esp32c6
+  framework:
+    type: esp-idf
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  password: "rascal123"
+
+ota:
+  - platform: esphome
+    password: "rascal123"
+
+wifi:
+  ssid: "dragonnew1719"
+  password: "rascal123"
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Esp32C6Template Fallback Hotspot"
+    password: "J5ZYOAJba0RQ"
+
+captive_portal:
