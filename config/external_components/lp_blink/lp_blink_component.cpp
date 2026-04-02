@@ -51,6 +51,42 @@ void LPBlinkComponent::save_last_state_(bool running) {
   s_rtc_blink_state.running = running;
 }
 
+void LPBlinkComponent::drive_pin_low_() {
+  // ** NOTE, this helper keeps the gpio pin in rtc mode so the lp core
+  // can still claim and use it.
+  gpio_num_t gpio_num = static_cast<gpio_num_t>(this->gpio_num_);
+
+  if (!rtc_gpio_is_valid_gpio(gpio_num)) {
+    ESP_LOGW(TAG, "Cannot drive GPIO %u low, pin is not LP/RTC capable", this->gpio_num_);
+    return;
+  }
+
+  esp_err_t err = rtc_gpio_hold_dis(gpio_num);
+  if (err != ESP_OK) {
+    ESP_LOGW(TAG, "Failed to release RTC hold on GPIO %u: %d", this->gpio_num_, err);
+  }
+
+  err = rtc_gpio_init(gpio_num);
+  if (err != ESP_OK) {
+    ESP_LOGW(TAG, "Failed to route GPIO %u back to RTC IO: %d", this->gpio_num_, err);
+    return;
+  }
+
+  err = rtc_gpio_set_direction(gpio_num, RTC_GPIO_MODE_OUTPUT_ONLY);
+  if (err != ESP_OK) {
+    ESP_LOGW(TAG, "Failed to set GPIO %u as RTC output: %d", this->gpio_num_, err);
+    return;
+  }
+
+  err = rtc_gpio_set_level(gpio_num, 0);
+  if (err != ESP_OK) {
+    ESP_LOGW(TAG, "Failed to drive GPIO %u low: %d", this->gpio_num_, err);
+    return;
+  }
+
+  ESP_LOGD(TAG, "Drove GPIO %u low after stopping LP core", this->gpio_num_);
+}
+
 bool LPBlinkComponent::start_lp_core_() {
   gpio_num_t gpio_num = static_cast<gpio_num_t>(this->gpio_num_);
 
@@ -118,12 +154,14 @@ void LPBlinkComponent::start_blink() {
 
 void LPBlinkComponent::stop_blink() {
   if (!this->running_) {
+    this->drive_pin_low_();
     this->save_last_state_(false);
     ESP_LOGI(TAG, "LP blink is already stopped");
     return;
   }
 
   ulp_lp_core_stop();
+  this->drive_pin_low_();
   this->running_ = false;
   this->save_last_state_(false);
   ESP_LOGI(TAG, "Stopped LP core timer/wakeups");

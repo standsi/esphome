@@ -31,6 +31,7 @@ class LPBlinkComponent : public Component {
  protected:
   bool should_start_on_boot_() const;
   void save_last_state_(bool running);
+  void drive_pin_low_();
 
   bool start_lp_core_();
 
