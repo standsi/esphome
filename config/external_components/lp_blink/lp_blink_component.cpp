@@ -36,8 +36,8 @@ bool LPBlinkComponent::should_start_on_boot_() const {
       if (s_rtc_blink_state.magic == RTC_STATE_MAGIC) {
         return s_rtc_blink_state.running;
       }
-      ESP_LOGW(TAG, "No saved LP state in RTC memory, defaulting to running");
-      return true;
+      ESP_LOGW(TAG, "No saved LP state in RTC memory, defaulting to stopped");
+      return false;
   }
 
   return true;
