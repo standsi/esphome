@@ -71,18 +71,18 @@ number:
       lambda: |-
         id(lp_blink_component).set_wakeup_period_ms((uint32_t) x);
 
-switch:
-  - platform: template
-    name: "LP Blink Enabled"
-    id: switch_lp_blink_enabled
-    lambda: |-
-      return id(lp_blink_component).is_running();
-    turn_on_action:
-      lambda: |-
-        id(lp_blink_component).start_blink();
-    turn_off_action:
-      lambda: |-
-        id(lp_blink_component).stop_blink();
+# switch:
+#   - platform: template
+#     name: "LP Blink Enabled"
+#     id: switch_lp_blink_enabled
+#     lambda: |-
+#       return id(lp_blink_component).is_running();
+#     turn_on_action:
+#       lambda: |-
+#         id(lp_blink_component).start_blink();
+#     turn_off_action:
+#       lambda: |-
+#         id(lp_blink_component).stop_blink();
 
 binary_sensor:
   - platform: gpio

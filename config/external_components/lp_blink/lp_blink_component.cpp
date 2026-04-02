@@ -16,12 +16,13 @@ namespace lp_blink {
 static const char *const TAG = "lp_blink";
 static constexpr uint32_t RTC_STATE_MAGIC = 0x4C50424BU;
 
-struct RTC_DATA_ATTR RTCBlinkState {
+struct RTCBlinkState {
   uint32_t magic;
   bool running;
 };
 
-static RTCBlinkState s_rtc_blink_state = {
+// ** NOTE that the RTC memory data attribute needs to be here on the instance var, not struct
+static RTC_DATA_ATTR RTCBlinkState s_rtc_blink_state = {
     .magic = 0,
     .running = true,
 };
@@ -37,6 +38,8 @@ bool LPBlinkComponent::should_start_on_boot_() const {
         return s_rtc_blink_state.running;
       }
       ESP_LOGW(TAG, "No saved LP state in RTC memory, defaulting to stopped");
+      // and go ahead and save the default state to avoid this warning on next boot
+      // *** don't need to do this here, will be saved on return to setup.
       return false;
   }
 
