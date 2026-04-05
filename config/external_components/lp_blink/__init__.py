@@ -14,6 +14,7 @@ CONF_GPIO_NUM = "gpio_num"
 CONF_INIT_STATE = "init_state"
 CONF_PULSE_WIDTH_US = "pulse_width_us"
 CONF_WAKE_PERIOD_MS = "wake_period_ms"
+CONF_FLASH_IO_INVERT = "flash_io_invert"
 
 InitState = lp_blink_ns.enum("InitState", is_class=True)
 
@@ -47,6 +48,7 @@ CONFIG_SCHEMA = cv.Schema(
         ),
         cv.Optional(CONF_PULSE_WIDTH_US, default=30000): cv.positive_int,
         cv.Optional(CONF_WAKE_PERIOD_MS, default=1000): cv.positive_int,
+        cv.Optional(CONF_FLASH_IO_INVERT, default=False): cv.boolean,
     }
 ).extend(cv.COMPONENT_SCHEMA)
 
@@ -62,3 +64,4 @@ async def to_code(config):
     cg.add(var.set_init_state(config[CONF_INIT_STATE]))
     cg.add(var.set_pulse_width_us(config[CONF_PULSE_WIDTH_US]))
     cg.add(var.set_wakeup_period_ms(config[CONF_WAKE_PERIOD_MS]))
+    cg.add(var.set_flash_lp_io_inverted(config[CONF_FLASH_IO_INVERT]))

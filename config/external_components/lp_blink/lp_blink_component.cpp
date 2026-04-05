@@ -52,12 +52,14 @@ void LPBlinkComponent::save_last_state_(bool running) {
 }
 
 void LPBlinkComponent::drive_pin_low_() {
+  // ** WITH THE INTRO OF INVERTED PIN OUTPUT,
+  // this really sets the pin to the "off" state, which may be high or low depending on the inverted setting.
   // ** NOTE, this helper keeps the gpio pin in rtc mode so the lp core
   // can still claim and use it.
   gpio_num_t gpio_num = static_cast<gpio_num_t>(this->gpio_num_);
 
   if (!rtc_gpio_is_valid_gpio(gpio_num)) {
-    ESP_LOGW(TAG, "Cannot drive GPIO %u low, pin is not LP/RTC capable", this->gpio_num_);
+    ESP_LOGW(TAG, "Cannot drive GPIO %u off, pin is not LP/RTC capable", this->gpio_num_);
     return;
   }
 
@@ -78,13 +80,13 @@ void LPBlinkComponent::drive_pin_low_() {
     return;
   }
 
-  err = rtc_gpio_set_level(gpio_num, 0);
+  err = rtc_gpio_set_level(gpio_num, this->flash_lp_io_inverted_ ? 1 : 0);
   if (err != ESP_OK) {
-    ESP_LOGW(TAG, "Failed to drive GPIO %u low: %d", this->gpio_num_, err);
+    ESP_LOGW(TAG, "Failed to drive GPIO %u off: %d", this->gpio_num_, err);
     return;
   }
 
-  ESP_LOGD(TAG, "Drove GPIO %u low after stopping LP core", this->gpio_num_);
+  ESP_LOGD(TAG, "Drove GPIO %u off after stopping LP core", this->gpio_num_);
 }
 
 bool LPBlinkComponent::start_lp_core_() {
@@ -109,6 +111,7 @@ bool LPBlinkComponent::start_lp_core_() {
   ulp_main_shared::flash_lp_io() = static_cast<uint32_t>(rtc_io_number_get(gpio_num));
   ulp_main_shared::pulse_width_us() = this->pulse_width_us_;
   ulp_main_shared::run_count() = 0;
+  ulp_main_shared::flash_lp_io_inverted() = this->flash_lp_io_inverted_ ? 1U : 0U;
 
   ulp_lp_core_cfg_t cfg = {
       .wakeup_source = ULP_LP_CORE_WAKEUP_SOURCE_LP_TIMER,
@@ -183,6 +186,15 @@ void LPBlinkComponent::set_wakeup_period_ms(uint32_t wakeup_period_ms) {
 
   if (this->running_) {
     this->start_lp_core_();
+  }
+}
+
+void LPBlinkComponent::set_flash_lp_io_inverted(bool inverted) {
+  this->flash_lp_io_inverted_ = inverted;
+  ESP_LOGI(TAG, "Setting flash LP IO inverted to %s", inverted ? "true" : "false");
+
+  if (this->running_) {
+    ulp_main_shared::flash_lp_io_inverted() = this->flash_lp_io_inverted_ ? 1U : 0U;
   }
 }
 
