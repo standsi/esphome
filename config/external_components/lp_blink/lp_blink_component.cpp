@@ -142,7 +142,8 @@ void LPBlinkComponent::setup() {
 
   this->running_ = false;
   this->save_last_state_(false);
-  ulp_lp_core_stop();  // this ensures actually stopped if was running before reset
+  ulp_lp_core_stop();      // this ensures actually stopped if was running before reset
+  this->drive_pin_low_();  // and ensures pin is in the "off" state if not starting
   ESP_LOGI(TAG, "LP blink initialized in stopped state");
 }
 
