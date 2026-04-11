@@ -27,6 +27,7 @@ class LPBlinkComponent : public Component {
   void set_init_state(InitState init_state) { this->init_state_ = init_state; }
   void set_pulse_width_us(uint32_t pulse_width_us);
   void set_wakeup_period_ms(uint32_t wakeup_period_ms);
+  void set_flash_lp_io_inverted(bool inverted);
 
  protected:
   bool should_start_on_boot_() const;
@@ -38,6 +39,7 @@ class LPBlinkComponent : public Component {
   uint8_t gpio_num_;
   uint32_t pulse_width_us_{30000};
   uint32_t wakeup_period_us_{1000000};
+  bool flash_lp_io_inverted_{false};
   InitState init_state_{InitState::RUNNING};
   bool running_{false};
 };
