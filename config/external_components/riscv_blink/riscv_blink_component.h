@@ -34,6 +34,8 @@ class RISCVBlinkComponent : public Component {
   void save_last_state_(bool running);
   void drive_pin_to_inactive_();
   bool start_ulp_riscv_();
+  void enable_sleep_support_();
+  void disable_sleep_support_();
 
   uint8_t gpio_num_;
   uint32_t pulse_width_us_{30000};
