@@ -72,17 +72,37 @@ number:
       lambda: |-
         id(riscv_blink_component).set_wakeup_period_ms((uint32_t) x);
 
-switch:
+# switch:
+#   - platform: template
+#     name: "ULP Blink Enabled"
+#     lambda: |-
+#       return id(riscv_blink_component).is_running();
+#     turn_on_action:
+#       lambda: |-
+#         id(riscv_blink_component).start_blink();
+#     turn_off_action:
+#       lambda: |-
+#         id(riscv_blink_component).stop_blink();
+
+binary_sensor:
   - platform: template
-    name: "ULP Blink Enabled"
+    name: "ULP Blink Running"
+    id: blink_on
     lambda: |-
       return id(riscv_blink_component).is_running();
-    turn_on_action:
-      lambda: |-
-        id(riscv_blink_component).start_blink();
-    turn_off_action:
-      lambda: |-
-        id(riscv_blink_component).stop_blink();
+
+button:
+  - platform: template
+    name: "Toggle blink"
+    id: toggle_blink
+    on_press:
+      then:
+        lambda: |-
+          if (id(riscv_blink_component).is_running()) {
+            id(riscv_blink_component).stop_blink();
+          } else {
+            id(riscv_blink_component).start_blink();
+          }
 
 deep_sleep:
   id: sleep1

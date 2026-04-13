@@ -96,6 +96,18 @@ void RISCVBlinkComponent::drive_pin_to_inactive_() {
     return;
   }
 
+  err = rtc_gpio_set_direction_in_sleep(gpio_num, RTC_GPIO_MODE_OUTPUT_ONLY);
+  if (err != ESP_OK) {
+    ESP_LOGW(TAG, "Failed to set GPIO %u deep-sleep direction: %d", this->gpio_num_, err);
+    return;
+  }
+
+  err = rtc_gpio_hold_en(gpio_num);
+  if (err != ESP_OK) {
+    ESP_LOGW(TAG, "Failed to hold GPIO %u inactive for deep sleep: %d", this->gpio_num_, err);
+    return;
+  }
+
   ESP_LOGD(TAG, "Drove GPIO %u inactive after stopping ULP RISC-V", this->gpio_num_);
 }
 
@@ -178,6 +190,11 @@ bool RISCVBlinkComponent::start_ulp_riscv_() {
     ESP_LOGW(TAG, "Failed to deinit RTC GPIO %u before restart: %d", this->gpio_num_, err);
   }
 
+  err = rtc_gpio_hold_dis(gpio_num);
+  if (err != ESP_OK) {
+    ESP_LOGW(TAG, "Failed to release RTC hold on GPIO %u before restart: %d", this->gpio_num_, err);
+  }
+
   err = rtc_gpio_init(gpio_num);
   if (err != ESP_OK) {
     ESP_LOGE(TAG, "Failed to init RTC GPIO %u: %d", this->gpio_num_, err);
@@ -252,6 +269,7 @@ void RISCVBlinkComponent::start_blink() {
 
 void RISCVBlinkComponent::stop_blink() {
   if (!this->running_) {
+    this->disable_sleep_support_();
     this->drive_pin_to_inactive_();
     this->save_last_state_(false);
     ESP_LOGI(TAG, "RISC-V blink is already stopped");
