@@ -132,10 +132,13 @@ void RISCVBlinkComponent::enable_sleep_support_() {
     ESP_LOGW(TAG, "Failed to keep RTC_PERIPH powered during sleep: %d", periph_err);
   }
 
+// Not supported by s3
+#if defined(USE_ESP32_VARIANT_ESP32S2)
   const esp_err_t slow_mem_err = esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_ON);
   if (slow_mem_err != ESP_OK) {
     ESP_LOGW(TAG, "Failed to keep RTC_SLOW_MEM powered during sleep: %d", slow_mem_err);
   }
+#endif
 
   s_sleep_hook_component = this;
 }
@@ -155,10 +158,13 @@ void RISCVBlinkComponent::disable_sleep_support_() {
     ESP_LOGW(TAG, "Failed to restore RTC_PERIPH sleep policy: %d", periph_err);
   }
 
+// Not supported by s3
+#if defined(USE_ESP32_VARIANT_ESP32S2)
   const esp_err_t slow_mem_err = esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_AUTO);
   if (slow_mem_err != ESP_OK) {
     ESP_LOGW(TAG, "Failed to restore RTC_SLOW_MEM sleep policy: %d", slow_mem_err);
   }
+#endif
 }
 
 bool RISCVBlinkComponent::start_ulp_riscv_() {

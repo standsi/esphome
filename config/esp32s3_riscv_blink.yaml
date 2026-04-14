@@ -12,7 +12,7 @@ esphome:
 
 esp32:
   variant: esp32s3
-  board: adafruit_qtpy_esp32s3_n4r2
+  board: esp32-s3-devkitc-1
   framework:
     type: esp-idf
     sdkconfig_options:
@@ -97,7 +97,7 @@ button:
     id: toggle_blink
     on_press:
       then:
-      lambda: |-
+        lambda: |-
           if (id(riscv_blink_component).is_running()) {
             id(riscv_blink_component).stop_blink();
           } else {
