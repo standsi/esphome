@@ -12,7 +12,9 @@ esphome:
 
 esp32:
   variant: esp32s3
-  board: esp32-s3-devkitc-1
+  # use dev board in esphome for testing, but adafruit board works in HA
+#  board: esp32-s3-devkitc-1
+  board: adafruit_qtpy_esp32s3_n4r2
   framework:
     type: esp-idf
     sdkconfig_options:
